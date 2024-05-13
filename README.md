@@ -1,2 +1,3 @@
 # Torturer(Final Project)
-Torturers from SWS2023
+Torturers For Android
+Based on https://github.com/EQ3A2A/An-Alliance-2-Escape
