@@ -1,0 +1,169 @@
+using System.Collections;
+using System.Collections.Generic;
+using Unity.Netcode;
+using UnityEngine;
+using UnityEngine.Networking;
+
+public class MaskDudeBehaviorNet : NetworkBehaviour
+{
+    // Start is called before the first frame update
+    private Rigidbody2D Rigidbody;
+    private const float Speed=5.0f;
+    public  float JumpForce=8.0f;
+    public Vector3 SpawnPoint;
+    private const float ShootPlace = 0.3f;
+    private NetworkVariable<int> FaceDirection= new NetworkVariable<int>(1,NetworkVariableReadPermission.Everyone,NetworkVariableWritePermission.Owner);
+    private SpriteRenderer SpriteRenderer;
+    private OnGroundDector OngroundDector;
+    private const float DeathHight= -22f;
+    public ParticleSystem playerPS;
+    public AudioSource AudioSource;
+    public AudioClip shoot, jump, move, die;
+    private int moveFlag = 0;
+    // public FrogBehavior BoundedDieObject;
+    
+	public int maxHealth = 3;
+    public int currentHealth;
+    public HealthBarBehavior healthBar;
+
+    private GameObject[] SpikeList;
+    public float keygap = 0.1f;
+    private float gaptimer;
+    void Awake()
+    {
+        Rigidbody = GetComponent<Rigidbody2D>();
+        SpriteRenderer = GetComponent<SpriteRenderer>();
+        OngroundDector = GetComponent<OnGroundDector>();
+        AudioSource = GetComponent<AudioSource>();
+        SpikeList = GameObject.FindGameObjectsWithTag("MovingSpike");
+    }
+
+    void Start()
+    {
+        Born();
+    }
+     void OnCollisionEnter2D(Collision2D collision){
+        Debug.Log("collision happen");
+        if (collision.gameObject.CompareTag("Spike")) TakeDemage(1);
+        if (collision.gameObject.CompareTag("Particle")) TakeDemage(1);
+        if (collision.gameObject.CompareTag("MovingSpike")) TakeDemage(1);
+    }
+
+    void Update()
+    {
+        //Debug.Log(FaceDirection.Value);
+        MoveALittleBit();
+        Move();
+        JumpDetect();
+        if(transform.position.y < DeathHight) BoundedDie();
+        
+    }
+    void Move(){
+        if(IsOwner){
+            if (Input.GetKey(KeyCode.D))
+	        {
+	            FaceDirection.value = 1;
+	            //SpriteRenderer.flipX = false;
+	            Rigidbody.velocity += new Vector2(FaceDirection.value * Speed - Rigidbody.velocity.x, 0);
+	        }
+	        else if (Input.GetKey(KeyCode.A))
+	        {
+	            //SpriteRenderer.flipX = true;
+	            FaceDirection.value = -1;
+	            Rigidbody.velocity += new Vector2(FaceDirection.value * Speed - Rigidbody.velocity.x, 0);
+	        }
+	        else
+	        {
+	            Rigidbody.velocity -= new Vector2(Rigidbody.velocity.x, 0);
+	        }
+            ShootArrow();
+        }
+        if(FaceDirection.Value == 1) SpriteRenderer.flipX=false;
+        else SpriteRenderer.flipX=true;
+    }
+    void JumpDetect(){
+        if(IsHost){
+            if(Input.GetKeyDown(KeyCode.W)){
+                JumpClientRpc();
+                //Debug.Log("ForceAdded");
+            }
+        }
+        ParticleSystem();
+    }
+    void ShootArrow()
+    {
+        if (Input.GetKeyDown(KeyCode.LeftShift))
+        {
+            GameObject Arrow = Instantiate(Resources.Load("Prefabs/Arrow") as GameObject);
+            Arrow.transform.localPosition = transform.localPosition+new Vector3(0,ShootPlace,0);
+            ArrowBehavior ArrowBehavior = Arrow.GetComponent<ArrowBehavior>();
+            ArrowBehavior.Direction = FaceDirection.Value;
+            Arrow.GetComponent<NetworkObject>().Spawn();
+            AudioSource.clip = shoot;
+            AudioSource.Play();
+        }
+    }
+    public void Die(){
+        AudioSource.clip = die;
+        AudioSource.Play();
+        transform.position=SpawnPoint;
+        Rigidbody.velocity=Vector3.zero;
+		Born();
+        ResetSpikes();
+}
+
+    [ClientRpc]
+    private void JumpClientRpc()
+    {
+        if(IsHost){
+            if(OngroundDector.TestOnGround())
+            {
+            	AudioSource.clip = jump;
+            	AudioSource.Play();
+                Rigidbody.AddForce(transform.up*JumpForce,ForceMode2D.Impulse);
+            }
+        }
+        else{
+            GameObject frog = GameObject.Find("NinjaFrog(Clone)");
+            if(frog.GetComponent<OnGroundDector>().TestOnGround())
+            {
+                frog.GetComponent<Rigidbody2D>().AddForce(transform.up*JumpForce,ForceMode2D.Impulse);
+                frog.GetComponent<FrogBehaviorNet>().AudioSource.clip = frog.GetComponent<FrogBehaviorNet>().jump;
+                frog.GetComponent<FrogBehaviorNet>().AudioSource.Play();
+            }
+        }
+    }
+    
+    private void BoundedDie()
+    {
+        if(IsOwner)
+            BoundedDieClientRpc();
+    }
+
+    [ClientRpc]
+    private void BoundedDieClientRpc()
+    {
+        Debug.Log("BoundedDieClientRpc called");
+        if(IsHost)
+            Die();
+        else{
+            Debug.Log("Frog die");
+            GameObject frog = GameObject.Find("NinjaFrog(Clone)");
+            frog.GetComponent<FrogBehaviorNet>().Die();
+        }
+    }
+
+    void ParticleSystem()
+    {
+        playerPS.Play();
+        
+    }
+
+    private void MoveALittleBit(){
+        if(moveFlag == 0) 
+            transform.position += new Vector3(-0.0011f, -0.0011f, 0);
+        else
+            transform.position += new Vector3(0.0011f, 0.0011f, 0);
+        moveFlag = 1 - moveFlag;
+    }
+}

@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!78 &1
+TagManager:
+  serializedVersion: 2
+  tags:
+  - Spike
+  - Wall
+  - Particle
+  - MovingSpike
+  - MovingSpikeMuskDude
+  - MovingSpikeNinjaFrog
+  - MovingPlatform
+  - DisappearingWall
+  - DisappearingFloor
+  layers:
+  - Default
+  - TransparentFX
+  - Ignore Raycast
+  - Arrow
+  - Water
+  - UI
+  - Ground
+  - 
+  - 
+  - P1Cam
+  - P2Cam
+  - DisappearingWall
+  - Player1
+  - Player2
+  - Background
+  - 
+  - P1Traps
+  - P2Traps
+  - P1VisibleGround
+  - P2VisibleGround
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  m_SortingLayers:
+  - name: Default
+    uniqueID: 0
+    locked: 0
+  - name: old
+    uniqueID: 4025134607
+    locked: 0
